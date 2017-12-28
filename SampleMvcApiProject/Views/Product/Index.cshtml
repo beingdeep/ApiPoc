@@ -1,0 +1,237 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<body class="container">
+    <div class="col-sm-4">
+        <div class="label-primary" style="color: white;font-weight:bold;text-align:center;margin-top:2%">Add Product Information</div>
+
+        <form action="/" method="post" id="frmAddProduct">
+            <div class="form-group">
+                <label>Supplier</label>
+                <div class="form-inline">
+                    <select class="form-control col-sm-4" id="ddlSuppliers" style="width:50%">
+                        <option value="" disabled selected>Select</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#supplierModal" style="margin-left:5px">Add Supplier</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" class="form-control" id="productname" placeholder="Enter product name">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" class="form-control" id="productcategory" placeholder="Enter product category">
+            </div>
+            <div class="form-group">
+                <label>MRP</label>
+                <input type="text" class="form-control" id="productMRP" placeholder="Enter product MRP" onkeypress="return isNumberKey(event)" maxlength="4">
+            </div>
+            <div class="form-group">
+                <label>GST</label>
+                <input type="text" class="form-control" id="productGST" placeholder="Enter product GST" onkeypress="return isNumberKey(event)" maxlength="2">
+            </div>
+            <div class="form-group">
+                <label>Shipping</label>
+                <input type="text" class="form-control" id="productShipping" placeholder="Enter product shipping cost" onkeypress="return isNumberKey(event)" maxlength="2">
+            </div>
+            <input type="hidden" value="" id="productid_hdn" />
+            <button type="submit" class="btn btn-primary" id="productsave_btn">Save</button>
+        </form>
+    </div> 
+    <div class="col-offset-sm-1 col-sm-7">
+        <div class="label-primary" style="color: white;font-weight:bold;text-align:center;margin-top:1%">Product Details</div>
+        <table class="table" id="producttable">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>MRP</th>
+                    <th>GST</th>
+                    <th>Shipping</th>
+                    <th>Total Price</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div class="modal fade" id="supplierModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Product Supplier</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="supplier-name" class="col-form-label">Supplier Name:</label>
+                            <input type="text" class="form-control" id="suppliername">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="supplier_btn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/Scripts/BusinessLogic.js"></script>
+    <script type="text/javascript">
+        try {
+            var _BL;
+            $(document).ready(function () {
+                _BL = new $.BL();
+                _BL.getSuppliers((data) => {
+                    SupplierDropdown('#ddlSuppliers', true, data);
+                });
+
+                _BL.getProducts((data) => {
+                    ProductsGrid('#producttable', true, data);
+                });
+
+                //_BL.getProduct(id, (data) => {
+                //    ProductsGrid('#producttable', true, data);
+                //});
+            });
+
+            $(document).on('submit', 'form', (e) => {
+                e.preventDefault();
+
+            });
+            $(document).on('click', '#supplier_btn', (e) => {
+                let data = { 'Name': $("#suppliername").val() };
+                _BL.setSuppliers(data, function (response) {
+                    if (!$.isEmptyObject(response)) {
+                        let supArr = [];
+                        $('#supplierModal').modal('toggle');
+                        SupplierDropdown('#ddlSuppliers', false, supArr);
+                    }
+                });
+            });
+            $(document).on('click', '#productsave_btn', (e) => {
+                let data = GetFormData("frmAddProduct");
+                let pid = $("#productid_hdn").val();
+                data["id"] = +pid;
+                data["ProductPrices"]["ProductId"] = +pid;
+                if (pid != "") {
+                    _BL.updateProduct(pid, data, function (response) {
+                        console.log(response);
+                        if (!$.isEmptyObject(response)) {
+                            alert("Product successfully updated");
+                            $('form')[0].reset();
+                            _BL.getProducts((data) => {
+                                ProductsGrid('#producttable', true, data);
+
+                            });
+                        }
+                    });
+                }
+                else {
+                    _BL.setProduct(data, function (response) {
+                        console.log(response);
+                        if (!$.isEmptyObject(response)) {
+                            alert("Product successfully added");
+                            $('form')[0].reset();
+                            _BL.getProducts((data) => {
+                                ProductsGrid('#producttable', true, data);
+                            });
+
+                        }
+                    });
+                }
+            });
+
+            var SupplierDropdown = (elem, empty, data) => {
+                console.log(data);
+                if (empty) {
+                    $(elem).empty();
+                    $(elem).append('<option value="" disabled selected>Select</option>');
+                }
+
+                $.each(data, (i, val) => {
+                    $(elem).append('<option value="' + val.Id + '">' + val.Name + '</option>');
+                });
+            };
+            var ProductsGrid = (elem, empty, data) => {
+                if (empty) {
+                    $(elem).find('tbody').empty();
+                }
+
+                $.each(data, (i, val) => {
+                    $(elem).append('<tr><td>' + val.Name + '</td><td>' + val.Category + '</td><td>' + val.ProductPrices.MRP + '</td><td>' + val.ProductPrices.GST + '</td><td>' + val.ProductPrices.Shipping + '</td><td>' + val.TotalPrice + '</td><td> <button type="button" class="btn btn-default btn-sm"  onclick="editProduct(' + val.Id + ')"> <span class="glyphicon glyphicon-edit"></span> Edit</button></td><td><button type="button" class="btn btn-default btn-sm" onclick="deleteProduct(' + val.Id + ')"><span class="glyphicon glyphicon-remove"></span> Remove </button></td></tr>');
+                });
+            };
+            var GetFormData = (formName) => {
+                return {
+                    "Name": $("#productname").val(),
+                    "Category": $("#productcategory").val(),
+                    "SupplierId": $("#ddlSuppliers").val(),
+                    "ProductPrices": {
+                        "MRP": $("#productMRP").val(),
+                        "GST": $("#productGST").val(),
+                        "Shipping": $("#productShipping").val()
+                    }
+                }
+            };
+
+            var deleteProduct = (id) => {
+                _BL.deleteProduct(id, (data) => {
+                    console.log(data);
+                    alert("Product successfully deleted");
+                    _BL.getProducts((data) => {
+                        ProductsGrid('#producttable', true, data);
+                    });
+                });
+
+            };
+
+            var editProduct = (id) => {
+                _BL.getProduct(id, (data) => {
+                    console.log(data);
+                    // ProductsGrid('#producttable', true, data);
+                    $("#productname").val(data.Name);
+                    $("#productcategory").val(data.Category);
+                    $("#productMRP").val(data.ProductPrices.MRP);
+                    $("#productGST").val(data.ProductPrices.GST);
+                    $("#productShipping").val(data.ProductPrices.Shipping);
+                    $("#ddlSuppliers").val(data.SupplierId);
+                    $("#productid_hdn").val(data.Id);
+                });
+
+            };
+
+
+            var isNumberKey = (evt) => {
+                var charCode = (evt.which) ? evt.which : evt.keyCode;
+                if (charCode != 46 && charCode > 31
+                && (charCode < 48 || charCode > 57))
+                    return false;
+                return true;
+            }
+        } catch (e) {
+
+        }
+    </script>
+</body>
+</html>
